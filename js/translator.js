@@ -2,7 +2,8 @@
 class ClaudeTranslator {
     constructor() {
         this.apiKey = localStorage.getItem('claudeApiKey') || '';
-        this.apiEndpoint = 'https://api.anthropic.com/v1/messages';
+        // 使用本地代理服務器，避免 CORS 問題
+        this.apiEndpoint = '/api/claude';
         this.model = 'claude-3-5-sonnet-20241022';
     }
 
@@ -35,11 +36,13 @@ class ClaudeTranslator {
             // 確保 API key 是純 ASCII 字符串
             const apiKey = String(this.apiKey).trim();
 
-            console.log('Calling Claude API...');
+            console.log('Calling Claude API via proxy...');
             console.log('API Endpoint:', this.apiEndpoint);
             console.log('Model:', this.model);
 
+            // 通過代理服務器調用 Claude API
             const requestBody = {
+                apiKey: apiKey,
                 model: this.model,
                 max_tokens: 1024,
                 messages: [{
@@ -51,9 +54,7 @@ class ClaudeTranslator {
             const requestOptions = {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)
             };
