@@ -25,7 +25,7 @@ class ClaudeTranslator {
     // 調用 Claude API 進行翻譯
     async translate(text, sourceLanguage, targetLanguages) {
         if (!this.hasApiKey()) {
-            throw new Error('Please set Claude API Key first');
+            throw new Error('請先設置 Claude API Key');
         }
 
         // 構建翻譯提示
@@ -35,6 +35,19 @@ class ClaudeTranslator {
             // 確保 API key 是純 ASCII 字符串
             const apiKey = String(this.apiKey).trim();
 
+            console.log('Calling Claude API...');
+            console.log('API Endpoint:', this.apiEndpoint);
+            console.log('Model:', this.model);
+
+            const requestBody = {
+                model: this.model,
+                max_tokens: 1024,
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }]
+            };
+
             const requestOptions = {
                 method: 'POST',
                 headers: {
@@ -42,36 +55,46 @@ class ClaudeTranslator {
                     'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01'
                 },
-                body: JSON.stringify({
-                    model: this.model,
-                    max_tokens: 1024,
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }]
-                })
+                body: JSON.stringify(requestBody)
             };
 
             const response = await fetch(this.apiEndpoint, requestOptions);
 
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+
             if (!response.ok) {
-                let errorMessage = 'API request failed';
+                let errorMessage = 'API 請求失敗';
                 try {
                     const errorData = await response.json();
-                    errorMessage = errorData.error?.message || response.statusText;
+                    console.error('API Error:', errorData);
+                    errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
                 } catch (e) {
-                    errorMessage = response.statusText;
+                    errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 }
                 throw new Error(errorMessage);
             }
 
             const data = await response.json();
+            console.log('API Response:', data);
             const translationText = data.content[0].text;
 
             // 解析翻譯結果
             return this.parseTranslationResult(translationText, targetLanguages);
         } catch (error) {
             console.error('Translation failed:', error);
+
+            // 提供更友好的錯誤提示
+            if (error.message.includes('Failed to fetch')) {
+                throw new Error('無法連接到 Claude API。請檢查：\n1. 網絡連接是否正常\n2. API Key 是否正確\n3. 是否有 CORS 限制（建議使用代理服務器）');
+            } else if (error.message.includes('401')) {
+                throw new Error('API Key 無效，請檢查您的 API Key 是否正確');
+            } else if (error.message.includes('429')) {
+                throw new Error('API 請求次數過多，請稍後再試');
+            } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
+                throw new Error('Claude API 服務暫時不可用，請稍後再試');
+            }
+
             throw error;
         }
     }
