@@ -226,10 +226,43 @@ table tbody tr:hover {
     border-radius: 5px;
 }
 
+.translation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 5px 0;
+}
+
+.translation-row:last-child {
+    margin-bottom: 0;
+}
+
 .translation-item strong {
     display: inline-block;
     width: 100px;
     color: #495057;
+}
+
+.btn-copy {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.2s;
+    min-width: 40px;
+}
+
+.btn-copy:hover {
+    background: #5568d3;
+    transform: scale(1.1);
+}
+
+.btn-copy:active {
+    transform: scale(0.95);
 }
 
 .empty-state {
