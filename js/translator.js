@@ -25,18 +25,21 @@ class ClaudeTranslator {
     // 調用 Claude API 進行翻譯
     async translate(text, sourceLanguage, targetLanguages) {
         if (!this.hasApiKey()) {
-            throw new Error('請先設置 Claude API Key');
+            throw new Error('Please set Claude API Key first');
         }
 
         // 構建翻譯提示
         const prompt = this.buildTranslationPrompt(text, sourceLanguage, targetLanguages);
 
         try {
-            const response = await fetch(this.apiEndpoint, {
+            // 確保 API key 是純 ASCII 字符串
+            const apiKey = String(this.apiKey).trim();
+
+            const requestOptions = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': this.apiKey,
+                    'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
@@ -47,11 +50,19 @@ class ClaudeTranslator {
                         content: prompt
                     }]
                 })
-            });
+            };
+
+            const response = await fetch(this.apiEndpoint, requestOptions);
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API 錯誤: ${errorData.error?.message || response.statusText}`);
+                let errorMessage = 'API request failed';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error?.message || response.statusText;
+                } catch (e) {
+                    errorMessage = response.statusText;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -60,7 +71,7 @@ class ClaudeTranslator {
             // 解析翻譯結果
             return this.parseTranslationResult(translationText, targetLanguages);
         } catch (error) {
-            console.error('翻譯失敗:', error);
+            console.error('Translation failed:', error);
             throw error;
         }
     }
