@@ -499,6 +499,50 @@ table tbody tr:hover {
     }
 }
 
+/* Claude API 配置樣式 */
+.api-config,
+.ai-translation,
+.dictionary-search {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #A8B0BB;
+}
+
+.api-config h3,
+.ai-translation h3,
+.dictionary-search h3 {
+    color: #8A9AA9;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.save-to-library-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.btn-info {
+    background: #A8B0BB;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #8A9AA9;
+    transform: translateY(-2px);
+}
+
+#translationInput {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+}
+
 /* 響應式設計 */
 @media (max-width: 768px) {
     .header-content {
@@ -527,5 +571,9 @@ table tbody tr:hover {
     .sync-controls {
         justify-content: center;
         flex-wrap: wrap;
+    }
+
+    .save-to-library-buttons {
+        flex-direction: column;
     }
 }

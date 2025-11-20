@@ -79,12 +79,46 @@
                 </div>
             </div>
 
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="輸入中文、英文或韓文進行搜索...">
+            <!-- Claude API 配置 -->
+            <div class="api-config">
+                <h3>Claude API 設定</h3>
+                <div class="form-group">
+                    <label for="claudeApiKey">Claude API Key</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="claudeApiKey" placeholder="輸入你的 Claude API Key">
+                        <button id="saveApiKeyBtn" class="btn btn-primary">保存</button>
+                        <button id="testApiKeyBtn" class="btn btn-secondary">測試</button>
+                    </div>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        API Key 將安全地保存在本地瀏覽器中
+                    </small>
+                </div>
             </div>
 
-            <div class="translation-result" id="translationResults">
-                <!-- 搜索結果將顯示在這裡 -->
+            <!-- AI 翻譯 -->
+            <div class="ai-translation">
+                <h3>AI 智能翻譯</h3>
+                <div class="form-group">
+                    <label for="translationInput">輸入文字（自動檢測語言）</label>
+                    <textarea id="translationInput" placeholder="輸入中文、英文或韓文..." rows="3"></textarea>
+                </div>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <button id="translateBtn" class="btn btn-primary">🤖 AI 翻譯</button>
+                </div>
+                <div id="aiTranslationResult" class="translation-result" style="display: none;">
+                    <!-- AI 翻譯結果將顯示在這裡 -->
+                </div>
+            </div>
+
+            <!-- 辭庫/句庫搜索 -->
+            <div class="dictionary-search">
+                <h3>辭庫/句庫搜索</h3>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="輸入中文、英文或韓文進行搜索...">
+                </div>
+                <div class="translation-result" id="translationResults">
+                    <!-- 搜索結果將顯示在這裡 -->
+                </div>
             </div>
 
             <div style="margin-top: 30px; text-align: center;">
@@ -232,6 +266,7 @@
     <script src="firebase-config.js"></script>
 
     <!-- Application Scripts -->
+    <script src="js/translator.js"></script>
     <script src="js/firebase.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/app.js"></script>

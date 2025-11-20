@@ -3,10 +3,12 @@ class TranslatorApp {
     constructor() {
         this.firebase = null;
         this.storage = null;
+        this.translator = null;
         this.currentTab = 'translator';
         this.editingId = null;
         this.editingType = null;
         this.isSyncing = false;
+        this.lastTranslation = null; // 保存最後一次翻譯結果
         this.init();
     }
 
@@ -30,6 +32,12 @@ class TranslatorApp {
         this.storage.setSyncCallback(async (type) => {
             await this.syncToFirebase(type);
         });
+
+        // 初始化 Claude 翻譯器
+        if (typeof ClaudeTranslator !== 'undefined') {
+            this.translator = new ClaudeTranslator();
+            this.loadApiKey();
+        }
 
         this.setupEventListeners();
         this.loadCategories();
@@ -102,6 +110,21 @@ class TranslatorApp {
         }
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => this.downloadFromCloud());
+        }
+
+        // Claude API 相關事件
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const testApiKeyBtn = document.getElementById('testApiKeyBtn');
+        const translateBtn = document.getElementById('translateBtn');
+
+        if (saveApiKeyBtn) {
+            saveApiKeyBtn.addEventListener('click', () => this.saveApiKey());
+        }
+        if (testApiKeyBtn) {
+            testApiKeyBtn.addEventListener('click', () => this.testApiKey());
+        }
+        if (translateBtn) {
+            translateBtn.addEventListener('click', () => this.performTranslation());
         }
     }
 
@@ -784,6 +807,223 @@ class TranslatorApp {
                 document.body.removeChild(notification);
             }, 300);
         }, 3000);
+    }
+
+    // ===== Claude API 翻譯功能 =====
+
+    // 載入 API Key
+    loadApiKey() {
+        if (!this.translator) return;
+        const apiKey = this.translator.getApiKey();
+        if (apiKey) {
+            document.getElementById('claudeApiKey').value = apiKey;
+        }
+    }
+
+    // 保存 API Key
+    saveApiKey() {
+        if (!this.translator) {
+            alert('翻譯器未初始化');
+            return;
+        }
+
+        const apiKey = document.getElementById('claudeApiKey').value.trim();
+        if (!apiKey) {
+            alert('請輸入 API Key');
+            return;
+        }
+
+        this.translator.setApiKey(apiKey);
+        this.showNotification('API Key 已保存', 'success');
+    }
+
+    // 測試 API Key
+    async testApiKey() {
+        if (!this.translator || !this.translator.hasApiKey()) {
+            alert('請先輸入並保存 API Key');
+            return;
+        }
+
+        try {
+            const testBtn = document.getElementById('testApiKeyBtn');
+            testBtn.disabled = true;
+            testBtn.textContent = '測試中...';
+
+            // 使用簡單的測試文本
+            await this.translator.translate('你好', 'zh-TW', ['en']);
+
+            this.showNotification('API Key 測試成功！', 'success');
+        } catch (error) {
+            console.error('API Key 測試失敗:', error);
+            alert('API Key 測試失敗：' + error.message);
+        } finally {
+            const testBtn = document.getElementById('testApiKeyBtn');
+            testBtn.disabled = false;
+            testBtn.textContent = '測試';
+        }
+    }
+
+    // 執行翻譯
+    async performTranslation() {
+        if (!this.translator || !this.translator.hasApiKey()) {
+            alert('請先設置 Claude API Key');
+            return;
+        }
+
+        const text = document.getElementById('translationInput').value.trim();
+        if (!text) {
+            alert('請輸入要翻譯的文字');
+            return;
+        }
+
+        try {
+            const translateBtn = document.getElementById('translateBtn');
+            translateBtn.disabled = true;
+            translateBtn.textContent = '翻譯中...';
+
+            // 使用自動翻譯（自動檢測語言）
+            const result = await this.translator.autoTranslate(text);
+
+            // 保存翻譯結果
+            this.lastTranslation = result;
+
+            // 顯示結果
+            this.renderAITranslationResult(result);
+            this.showNotification('翻譯成功！', 'success');
+        } catch (error) {
+            console.error('翻譯失敗:', error);
+            alert('翻譯失敗：' + error.message);
+        } finally {
+            const translateBtn = document.getElementById('translateBtn');
+            translateBtn.disabled = false;
+            translateBtn.textContent = '🤖 AI 翻譯';
+        }
+    }
+
+    // 顯示 AI 翻譯結果
+    renderAITranslationResult(result) {
+        const resultDiv = document.getElementById('aiTranslationResult');
+
+        // 獲取創建者用戶名（如果已登入）
+        const createdBy = (this.firebase && this.firebase.getCurrentUsername())
+            ? ` - ${this.firebase.getCurrentUsername()}`
+            : '';
+
+        let html = '<h3>翻譯結果</h3>';
+        html += '<div class="translation-item">';
+
+        if (result.traditional) {
+            html += `
+                <div class="translation-row">
+                    <span><strong>繁體中文:</strong> ${result.traditional}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(result.traditional + createdBy)}')" title="複製">📋</button>
+                </div>
+            `;
+        }
+
+        if (result.simplified) {
+            html += `
+                <div class="translation-row">
+                    <span><strong>简体中文:</strong> ${result.simplified}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(result.simplified + createdBy)}')" title="複製">📋</button>
+                </div>
+            `;
+        }
+
+        if (result.english) {
+            html += `
+                <div class="translation-row">
+                    <span><strong>English:</strong> ${result.english}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(result.english + createdBy)}')" title="複製">📋</button>
+                </div>
+            `;
+        }
+
+        if (result.korean) {
+            html += `
+                <div class="translation-row">
+                    <span><strong>한국어:</strong> ${result.korean}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(result.korean + createdBy)}')" title="複製">📋</button>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+
+        // 添加保存按鈕
+        html += `
+            <div class="save-to-library-buttons">
+                <button class="btn btn-info" onclick="app.saveAIToDictionary()">💾 保存到辭庫</button>
+                <button class="btn btn-info" onclick="app.saveAIToPhrase()">💾 保存到句庫</button>
+            </div>
+        `;
+
+        resultDiv.innerHTML = html;
+        resultDiv.style.display = 'block';
+    }
+
+    // 保存 AI 翻譯到辭庫
+    saveAIToDictionary() {
+        if (!this.lastTranslation) {
+            alert('沒有可保存的翻譯結果');
+            return;
+        }
+
+        const entry = {
+            traditional: this.lastTranslation.traditional || '',
+            simplified: this.lastTranslation.simplified || '',
+            english: this.lastTranslation.english || '',
+            korean: this.lastTranslation.korean || '',
+            categoryId: null
+        };
+
+        // 添加創建者用戶名（如果已登入）
+        if (this.firebase && this.firebase.getCurrentUsername()) {
+            entry.createdBy = this.firebase.getCurrentUsername();
+        }
+
+        this.storage.addDictionaryEntry(entry);
+        this.showNotification('已保存到辭庫', 'success');
+
+        // 清空翻譯輸入框
+        document.getElementById('translationInput').value = '';
+
+        // 更新辭庫列表（如果在辭庫 tab）
+        if (this.currentTab === 'dictionary') {
+            this.renderDictionaryList();
+        }
+    }
+
+    // 保存 AI 翻譯到句庫
+    saveAIToPhrase() {
+        if (!this.lastTranslation) {
+            alert('沒有可保存的翻譯結果');
+            return;
+        }
+
+        const entry = {
+            traditional: this.lastTranslation.traditional || '',
+            simplified: this.lastTranslation.simplified || '',
+            english: this.lastTranslation.english || '',
+            korean: this.lastTranslation.korean || '',
+            categoryId: null
+        };
+
+        // 添加創建者用戶名（如果已登入）
+        if (this.firebase && this.firebase.getCurrentUsername()) {
+            entry.createdBy = this.firebase.getCurrentUsername();
+        }
+
+        this.storage.addPhraseEntry(entry);
+        this.showNotification('已保存到句庫', 'success');
+
+        // 清空翻譯輸入框
+        document.getElementById('translationInput').value = '';
+
+        // 更新句庫列表（如果在句庫 tab）
+        if (this.currentTab === 'phrase') {
+            this.renderPhraseList();
+        }
     }
 }
 
