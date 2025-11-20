@@ -1,17 +1,40 @@
 // 主應用邏輯
 class TranslatorApp {
     constructor() {
-        this.storage = new StorageManager();
+        this.firebase = null;
+        this.storage = null;
         this.currentTab = 'translator';
         this.editingId = null;
         this.editingType = null;
+        this.isSyncing = false;
         this.init();
     }
 
-    init() {
+    async init() {
+        // 初始化 Firebase（如果可用）
+        if (typeof FirebaseManager !== 'undefined') {
+            this.firebase = new FirebaseManager();
+            const initialized = await this.firebase.initialize();
+
+            if (initialized) {
+                // 設置 Firebase 回調
+                this.firebase.onAuthStateChanged = (user) => this.handleAuthChange(user);
+                this.firebase.onConnectionChange = (isOnline) => this.handleConnectionChange(isOnline);
+            }
+        }
+
+        // 初始化存儲管理器
+        this.storage = new StorageManager(this.firebase);
+
+        // 設置同步回調
+        this.storage.setSyncCallback(async (type) => {
+            await this.syncToFirebase(type);
+        });
+
         this.setupEventListeners();
         this.loadCategories();
         this.renderAll();
+        this.updateSyncStatus();
     }
 
     setupEventListeners() {
@@ -57,6 +80,29 @@ class TranslatorApp {
         document.getElementById('importFile').addEventListener('change', (e) => {
             this.importData(e.target.files[0]);
         });
+
+        // Firebase 登入/登出
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const syncBtn = document.getElementById('syncBtn');
+        const uploadBtn = document.getElementById('uploadToCloudBtn');
+        const downloadBtn = document.getElementById('downloadFromCloudBtn');
+
+        if (signInBtn) {
+            signInBtn.addEventListener('click', () => this.signIn());
+        }
+        if (signOutBtn) {
+            signOutBtn.addEventListener('click', () => this.signOut());
+        }
+        if (syncBtn) {
+            syncBtn.addEventListener('click', () => this.manualSync());
+        }
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', () => this.uploadToCloud());
+        }
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => this.downloadFromCloud());
+        }
     }
 
     switchTab(tabName) {
@@ -384,6 +430,272 @@ class TranslatorApp {
         document.getElementById('dictCount').textContent = this.storage.getDictionary().length;
         document.getElementById('phraseCount').textContent = this.storage.getPhrases().length;
         document.getElementById('categoryCount').textContent = this.storage.getCategories().length;
+    }
+
+    // ===== Firebase 相關方法 =====
+
+    // 處理認證狀態變化
+    async handleAuthChange(user) {
+        const signInSection = document.getElementById('signInSection');
+        const userSection = document.getElementById('userSection');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const syncControls = document.getElementById('syncControls');
+
+        if (user) {
+            // 用戶已登入
+            if (signInSection) signInSection.style.display = 'none';
+            if (userSection) userSection.style.display = 'block';
+            if (userName) userName.textContent = user.displayName || '用戶';
+            if (userEmail) userEmail.textContent = user.email;
+            if (syncControls) syncControls.style.display = 'block';
+
+            // 提示用戶是否要從雲端載入數據
+            const hasLocalData = this.storage.getDictionary().length > 0 ||
+                                this.storage.getPhrases().length > 0;
+
+            if (confirm('是否要從雲端載入數據？\n\n選擇「確定」從雲端下載數據（會覆蓋本地數據）\n選擇「取消」上傳本地數據到雲端')) {
+                await this.downloadFromCloud();
+            } else if (hasLocalData) {
+                await this.uploadToCloud();
+            }
+
+            // 啟動實時同步
+            this.startRealtimeSync();
+        } else {
+            // 用戶已登出
+            if (signInSection) signInSection.style.display = 'block';
+            if (userSection) userSection.style.display = 'none';
+            if (syncControls) syncControls.style.display = 'none';
+        }
+
+        this.updateSyncStatus();
+    }
+
+    // 處理網路連線變化
+    handleConnectionChange(isOnline) {
+        this.updateSyncStatus();
+        if (isOnline) {
+            this.showNotification('網路已連線', 'success');
+        } else {
+            this.showNotification('網路已斷線，將使用離線模式', 'warning');
+        }
+    }
+
+    // Google 登入
+    async signIn() {
+        if (!this.firebase) {
+            alert('Firebase 未初始化，請檢查配置');
+            return;
+        }
+
+        try {
+            await this.firebase.signInWithGoogle();
+        } catch (error) {
+            console.error('登入失敗:', error);
+            alert('登入失敗：' + error.message);
+        }
+    }
+
+    // 登出
+    async signOut() {
+        if (!this.firebase) return;
+
+        if (confirm('確定要登出嗎？本地數據不會被刪除。')) {
+            try {
+                await this.firebase.signOut();
+                this.showNotification('已登出', 'success');
+            } catch (error) {
+                console.error('登出失敗:', error);
+                alert('登出失敗：' + error.message);
+            }
+        }
+    }
+
+    // 同步到 Firebase
+    async syncToFirebase(type) {
+        if (!this.firebase || !this.firebase.isSignedIn() || this.isSyncing) {
+            return;
+        }
+
+        try {
+            this.isSyncing = true;
+            this.updateSyncStatus('同步中...');
+
+            if (type === 'categories') {
+                await this.firebase.syncCategories(this.storage.getCategories());
+            } else if (type === 'dictionary') {
+                await this.firebase.syncDictionary(this.storage.getDictionary());
+            } else if (type === 'phrases') {
+                await this.firebase.syncPhrases(this.storage.getPhrases());
+            }
+        } catch (error) {
+            console.error('同步失敗:', error);
+        } finally {
+            this.isSyncing = false;
+            this.updateSyncStatus();
+        }
+    }
+
+    // 手動同步
+    async manualSync() {
+        if (!this.firebase || !this.firebase.isSignedIn()) {
+            alert('請先登入');
+            return;
+        }
+
+        try {
+            this.updateSyncStatus('同步中...');
+            await this.firebase.uploadAllData(
+                this.storage.getCategories(),
+                this.storage.getDictionary(),
+                this.storage.getPhrases()
+            );
+            this.showNotification('同步成功', 'success');
+        } catch (error) {
+            console.error('同步失敗:', error);
+            alert('同步失敗：' + error.message);
+        } finally {
+            this.updateSyncStatus();
+        }
+    }
+
+    // 上傳到雲端
+    async uploadToCloud() {
+        if (!this.firebase || !this.firebase.isSignedIn()) {
+            alert('請先登入');
+            return;
+        }
+
+        if (!confirm('確定要上傳本地數據到雲端嗎？這會覆蓋雲端現有數據。')) {
+            return;
+        }
+
+        try {
+            this.updateSyncStatus('上傳中...');
+            await this.firebase.uploadAllData(
+                this.storage.getCategories(),
+                this.storage.getDictionary(),
+                this.storage.getPhrases()
+            );
+            this.showNotification('上傳成功', 'success');
+        } catch (error) {
+            console.error('上傳失敗:', error);
+            alert('上傳失敗：' + error.message);
+        } finally {
+            this.updateSyncStatus();
+        }
+    }
+
+    // 從雲端下載
+    async downloadFromCloud() {
+        if (!this.firebase || !this.firebase.isSignedIn()) {
+            alert('請先登入');
+            return;
+        }
+
+        if (!confirm('確定要從雲端下載數據嗎？這會覆蓋本地現有數據。')) {
+            return;
+        }
+
+        try {
+            this.updateSyncStatus('下載中...');
+            const data = await this.firebase.downloadAllData();
+
+            if (data.categories) {
+                this.storage.saveCategories(data.categories);
+            }
+            if (data.dictionary) {
+                this.storage.saveDictionary(data.dictionary);
+            }
+            if (data.phrases) {
+                this.storage.savePhrases(data.phrases);
+            }
+
+            this.loadCategories();
+            this.renderAll();
+            this.showNotification('下載成功', 'success');
+        } catch (error) {
+            console.error('下載失敗:', error);
+            alert('下載失敗：' + error.message);
+        } finally {
+            this.updateSyncStatus();
+        }
+    }
+
+    // 啟動實時同步
+    startRealtimeSync() {
+        if (!this.firebase || !this.firebase.isSignedIn()) return;
+
+        this.firebase.startSync((type, data) => {
+            // 當雲端數據變化時，更新本地數據（不觸發同步回調）
+            const originalCallback = this.storage.syncCallback;
+            this.storage.syncCallback = null;
+
+            if (type === 'categories') {
+                this.storage.saveCategories(data);
+                this.loadCategories();
+            } else if (type === 'dictionary') {
+                this.storage.saveDictionary(data);
+            } else if (type === 'phrases') {
+                this.storage.savePhrases(data);
+            }
+
+            this.renderAll();
+            this.storage.syncCallback = originalCallback;
+        });
+    }
+
+    // 更新同步狀態顯示
+    updateSyncStatus(customMessage = null) {
+        const statusEl = document.getElementById('syncStatus');
+        if (!statusEl) return;
+
+        if (customMessage) {
+            statusEl.textContent = customMessage;
+            statusEl.className = 'sync-status syncing';
+            return;
+        }
+
+        if (!this.firebase || !this.firebase.isSignedIn()) {
+            statusEl.textContent = '未登入';
+            statusEl.className = 'sync-status offline';
+        } else if (!this.firebase.isOnlineStatus()) {
+            statusEl.textContent = '離線模式';
+            statusEl.className = 'sync-status offline';
+        } else {
+            statusEl.textContent = '已同步';
+            statusEl.className = 'sync-status synced';
+        }
+    }
+
+    // 顯示通知
+    showNotification(message, type = 'info') {
+        // 簡單的通知實現
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: ${type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#17a2b8'};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
     }
 }
 

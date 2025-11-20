@@ -311,3 +311,161 @@ table tbody tr:hover {
     border-top: 2px solid #f0f0f0;
     text-align: right;
 }
+
+/* Firebase 相關樣式 */
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-left h1 {
+    margin: 0;
+}
+
+.header-left p {
+    margin: 5px 0 0 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.auth-section {
+    text-align: right;
+}
+
+.auth-hint {
+    margin: 5px 0 0 0;
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.btn-light {
+    background: white;
+    color: #333;
+    border: 2px solid white;
+}
+
+.btn-light:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 0.9em;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: white;
+}
+
+.user-details strong {
+    font-size: 1em;
+}
+
+.user-details small {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.sync-status-container {
+    display: flex;
+    align-items: center;
+}
+
+.sync-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.sync-status.synced {
+    background: #28a745;
+    color: white;
+}
+
+.sync-status.syncing {
+    background: #ffc107;
+    color: #333;
+}
+
+.sync-status.offline {
+    background: #6c757d;
+    color: white;
+}
+
+.sync-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* 通知動畫 */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-left,
+    .header-right {
+        text-align: center;
+    }
+
+    .auth-section {
+        text-align: center;
+    }
+
+    .user-info {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .user-details {
+        align-items: center;
+    }
+
+    .sync-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}

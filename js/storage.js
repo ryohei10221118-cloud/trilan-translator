@@ -1,7 +1,21 @@
 // 數據存儲管理模塊
 class StorageManager {
-    constructor() {
+    constructor(firebaseManager = null) {
+        this.firebase = firebaseManager;
+        this.syncCallback = null;
         this.initializeData();
+    }
+
+    // 設置同步回調
+    setSyncCallback(callback) {
+        this.syncCallback = callback;
+    }
+
+    // 觸發同步
+    async triggerSync(type) {
+        if (this.syncCallback) {
+            await this.syncCallback(type);
+        }
     }
 
     // 初始化數據
@@ -25,6 +39,7 @@ class StorageManager {
     // 保存分類
     saveCategories(categories) {
         localStorage.setItem('categories', JSON.stringify(categories));
+        this.triggerSync('categories');
     }
 
     // 添加分類
@@ -69,6 +84,7 @@ class StorageManager {
     // 保存辭庫
     saveDictionary(dictionary) {
         localStorage.setItem('dictionary', JSON.stringify(dictionary));
+        this.triggerSync('dictionary');
     }
 
     // 添加辭庫條目
@@ -133,6 +149,7 @@ class StorageManager {
     // 保存句庫
     savePhrases(phrases) {
         localStorage.setItem('phrases', JSON.stringify(phrases));
+        this.triggerSync('phrases');
     }
 
     // 添加句庫條目

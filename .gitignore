@@ -16,3 +16,6 @@ npm-debug.log*
 # Temporary files
 *.tmp
 .cache/
+
+# Firebase configuration (contains sensitive API keys)
+firebase-config.js
