@@ -157,24 +157,28 @@ class TranslatorApp {
 
     renderTranslationResult(entry) {
         const id = entry.id || Date.now();
+
+        // 獲取創建者用戶名（如果有）
+        const createdBy = entry.createdBy ? ` - ${entry.createdBy}` : '';
+
         return `
             <div class="translation-item">
                 ${entry.traditional ? `
                 <div class="translation-row">
-                    <span><strong>繁體中文:</strong> ${entry.traditional}</span>
-                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.traditional)}')" title="複製">📋</button>
+                    <span><strong>繁體中文:</strong> ${entry.traditional}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.traditional + createdBy)}')" title="複製">📋</button>
                 </div>` : ''}
                 <div class="translation-row">
-                    <span><strong>简体中文:</strong> ${entry.simplified}</span>
-                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.simplified)}')" title="複製">📋</button>
+                    <span><strong>简体中文:</strong> ${entry.simplified}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.simplified + createdBy)}')" title="複製">📋</button>
                 </div>
                 <div class="translation-row">
-                    <span><strong>English:</strong> ${entry.english}</span>
-                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.english)}')" title="複製">📋</button>
+                    <span><strong>English:</strong> ${entry.english}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.english + createdBy)}')" title="複製">📋</button>
                 </div>
                 <div class="translation-row">
-                    <span><strong>한국어:</strong> ${entry.korean}</span>
-                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.korean)}')" title="複製">📋</button>
+                    <span><strong>한국어:</strong> ${entry.korean}${createdBy}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.korean + createdBy)}')" title="複製">📋</button>
                 </div>
             </div>
         `;
@@ -228,6 +232,11 @@ class TranslatorApp {
             korean: document.getElementById('dictKorean').value,
             categoryId: parseInt(document.getElementById('dictCategory').value) || null
         };
+
+        // 添加創建者用戶名（如果已登入）
+        if (this.firebase && this.firebase.getCurrentUsername() && !this.editingId) {
+            entry.createdBy = this.firebase.getCurrentUsername();
+        }
 
         if (this.editingId && this.editingType === 'dictionary') {
             this.storage.updateDictionaryEntry(this.editingId, entry);
@@ -300,6 +309,11 @@ class TranslatorApp {
             korean: document.getElementById('phraseKorean').value,
             categoryId: parseInt(document.getElementById('phraseCategory').value) || null
         };
+
+        // 添加創建者用戶名（如果已登入）
+        if (this.firebase && this.firebase.getCurrentUsername() && !this.editingId) {
+            entry.createdBy = this.firebase.getCurrentUsername();
+        }
 
         if (this.editingId && this.editingType === 'phrase') {
             this.storage.updatePhrase(this.editingId, entry);
@@ -535,18 +549,39 @@ class TranslatorApp {
         }
     }
 
-    // Google 登入
+    // Email 登入
     async signIn() {
         if (!this.firebase) {
             alert('Firebase 未初始化，請檢查配置');
             return;
         }
 
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!username || !password) {
+            alert('請輸入帳號和密碼');
+            return;
+        }
+
         try {
-            await this.firebase.signInWithGoogle();
+            await this.firebase.signInWithEmail(username, password);
+            // 清空輸入框
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
         } catch (error) {
             console.error('登入失敗:', error);
-            alert('登入失敗：' + error.message);
+            let errorMessage = '登入失敗：';
+            if (error.code === 'auth/wrong-password') {
+                errorMessage += '密碼錯誤';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage += '帳號格式錯誤';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage += '密碼強度不足（至少6個字符）';
+            } else {
+                errorMessage += error.message;
+            }
+            alert(errorMessage);
         }
     }
 
