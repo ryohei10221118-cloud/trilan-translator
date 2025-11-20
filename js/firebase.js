@@ -72,6 +72,47 @@ class FirebaseManager {
         }
     }
 
+    // Email 登入/註冊（自動加上 @google.com）
+    async signInWithEmail(username, password) {
+        try {
+            const email = `${username}@google.com`;
+
+            // 先嘗試登入
+            try {
+                const result = await this.auth.signInWithEmailAndPassword(email, password);
+                return result.user;
+            } catch (signInError) {
+                // 如果帳號不存在，自動註冊
+                if (signInError.code === 'auth/user-not-found') {
+                    const result = await this.auth.createUserWithEmailAndPassword(email, password);
+                    // 設置顯示名稱為用戶名
+                    await result.user.updateProfile({
+                        displayName: username
+                    });
+                    return result.user;
+                } else {
+                    throw signInError;
+                }
+            }
+        } catch (error) {
+            console.error('Email 登入失敗:', error);
+            throw error;
+        }
+    }
+
+    // 獲取當前用戶名（不含 @google.com）
+    getCurrentUsername() {
+        if (!this.currentUser) return null;
+        if (this.currentUser.displayName) {
+            return this.currentUser.displayName;
+        }
+        // 從 email 提取用戶名
+        if (this.currentUser.email) {
+            return this.currentUser.email.split('@')[0];
+        }
+        return null;
+    }
+
     // 登出
     async signOut() {
         try {
