@@ -12,12 +12,12 @@
 */
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDTcC2EyTJwWsizrH4ho6vsb9ShF8Stxj8",
+    authDomain: "trilan-translator.firebaseapp.com",
+    projectId: "trilan-translator",
+    storageBucket: "trilan-translator.firebasestorage.app",
+    messagingSenderId: "618361147148",
+    appId: "1:618361147148:web:516eaa0c060cee59d28329"
 };
 
 /*
