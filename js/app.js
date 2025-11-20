@@ -116,6 +116,7 @@ class TranslatorApp {
         const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
         const testApiKeyBtn = document.getElementById('testApiKeyBtn');
         const translateBtn = document.getElementById('translateBtn');
+        const changeApiKeyBtn = document.getElementById('changeApiKeyBtn');
 
         if (saveApiKeyBtn) {
             saveApiKeyBtn.addEventListener('click', () => this.saveApiKey());
@@ -125,6 +126,9 @@ class TranslatorApp {
         }
         if (translateBtn) {
             translateBtn.addEventListener('click', () => this.performTranslation());
+        }
+        if (changeApiKeyBtn) {
+            changeApiKeyBtn.addEventListener('click', () => this.showApiKeyInput());
         }
     }
 
@@ -817,7 +821,29 @@ class TranslatorApp {
         const apiKey = this.translator.getApiKey();
         if (apiKey) {
             document.getElementById('claudeApiKey').value = apiKey;
+            this.hideApiKeyInput();
+        } else {
+            this.showApiKeyInput();
         }
+    }
+
+    // 顯示 API Key 輸入框
+    showApiKeyInput() {
+        document.getElementById('apiKeyInputSection').style.display = 'block';
+        document.getElementById('apiKeyConfiguredSection').style.display = 'none';
+    }
+
+    // 隱藏 API Key 輸入框
+    hideApiKeyInput() {
+        if (!this.translator || !this.translator.hasApiKey()) return;
+
+        const apiKey = this.translator.getApiKey();
+        // 顯示 API Key 前綴和遮罩
+        const preview = apiKey.substring(0, 20) + '****';
+        document.getElementById('apiKeyPreview').textContent = preview;
+
+        document.getElementById('apiKeyInputSection').style.display = 'none';
+        document.getElementById('apiKeyConfiguredSection').style.display = 'block';
     }
 
     // 保存 API Key
@@ -833,8 +859,15 @@ class TranslatorApp {
             return;
         }
 
+        // 驗證 API Key 格式
+        if (!apiKey.startsWith('sk-ant-')) {
+            alert('API Key 格式不正確，應該以 sk-ant- 開頭');
+            return;
+        }
+
         this.translator.setApiKey(apiKey);
         this.showNotification('API Key 已保存', 'success');
+        this.hideApiKeyInput();
     }
 
     // 測試 API Key

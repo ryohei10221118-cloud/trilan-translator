@@ -21,10 +21,10 @@
                             <input type="text" id="loginUsername" placeholder="帳號" class="login-input">
                             <input type="password" id="loginPassword" placeholder="密碼" class="login-input">
                             <button id="signInBtn" class="btn btn-light">
-                                🔒 登入
+                                🔒 登入/註冊
                             </button>
                         </div>
-                        <p class="auth-hint">登入後即可跨設備同步數據</p>
+                        <p class="auth-hint">新用戶首次登入將自動註冊 · 登入後可跨設備同步數據</p>
                     </div>
 
                     <!-- 已登入狀態 -->
@@ -82,16 +82,31 @@
             <!-- Claude API 配置 -->
             <div class="api-config">
                 <h3>Claude API 設定</h3>
-                <div class="form-group">
+
+                <!-- API Key 未配置狀態 -->
+                <div id="apiKeyInputSection" class="form-group">
                     <label for="claudeApiKey">Claude API Key</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="password" id="claudeApiKey" placeholder="輸入你的 Claude API Key">
+                        <input type="password" id="claudeApiKey" placeholder="輸入你的 Claude API Key (sk-ant-api03-...)">
                         <button id="saveApiKeyBtn" class="btn btn-primary">保存</button>
                         <button id="testApiKeyBtn" class="btn btn-secondary">測試</button>
                     </div>
                     <small style="color: #666; margin-top: 5px; display: block;">
-                        API Key 將安全地保存在本地瀏覽器中
+                        API Key 將安全地保存在本地瀏覽器中。<a href="https://console.anthropic.com/settings/keys" target="_blank" style="color: #3b7dd6;">獲取 API Key</a>
                     </small>
+                </div>
+
+                <!-- API Key 已配置狀態 -->
+                <div id="apiKeyConfiguredSection" style="display: none;">
+                    <div style="padding: 15px; background: #e8f5e9; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #2e7d32;">✓ API Key 已配置</strong>
+                            <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">
+                                <span id="apiKeyPreview">sk-ant-api03-****</span>
+                            </p>
+                        </div>
+                        <button id="changeApiKeyBtn" class="btn btn-secondary">修改</button>
+                    </div>
                 </div>
             </div>
 
