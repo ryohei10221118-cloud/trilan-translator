@@ -156,14 +156,67 @@ class TranslatorApp {
     }
 
     renderTranslationResult(entry) {
+        const id = entry.id || Date.now();
         return `
             <div class="translation-item">
-                <div><strong>繁體中文:</strong> ${entry.traditional}</div>
-                <div><strong>简体中文:</strong> ${entry.simplified}</div>
-                <div><strong>English:</strong> ${entry.english}</div>
-                <div><strong>한국어:</strong> ${entry.korean}</div>
+                ${entry.traditional ? `
+                <div class="translation-row">
+                    <span><strong>繁體中文:</strong> ${entry.traditional}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.traditional)}')" title="複製">📋</button>
+                </div>` : ''}
+                <div class="translation-row">
+                    <span><strong>简体中文:</strong> ${entry.simplified}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.simplified)}')" title="複製">📋</button>
+                </div>
+                <div class="translation-row">
+                    <span><strong>English:</strong> ${entry.english}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.english)}')" title="複製">📋</button>
+                </div>
+                <div class="translation-row">
+                    <span><strong>한국어:</strong> ${entry.korean}</span>
+                    <button class="btn-copy" onclick="app.copyText('${this.escapeHtml(entry.korean)}')" title="複製">📋</button>
+                </div>
             </div>
         `;
+    }
+
+    // 轉義 HTML 特殊字符
+    escapeHtml(text) {
+        return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // 複製文本到剪貼板
+    copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showNotification('已複製到剪貼板', 'success');
+            }).catch(err => {
+                this.fallbackCopy(text);
+            });
+        } else {
+            this.fallbackCopy(text);
+        }
+    }
+
+    // 備用複製方法（兼容舊瀏覽器）
+    fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            document.execCommand('copy');
+            this.showNotification('已複製到剪貼板', 'success');
+        } catch (err) {
+            this.showNotification('複製失敗，請手動複製', 'warning');
+        }
+
+        document.body.removeChild(textArea);
     }
 
     // 辭庫管理
